@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.GamerServices;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
+using Lidgren.Network;
 
 namespace Tron
 {
@@ -25,8 +26,12 @@ namespace Tron
         static int gamegridSize = 50;
         static int fieldSize = 20;
 
-        List<Player> playerList = new List<Player>();
+        Dictionary<long, Player> players = new Dictionary<long, Player>();
+
+        //List<Player> playerList = new List<Player>();
         Field[,] gamegrid = new Field[gamegridSize, gamegridSize];
+
+        NetClient client;
 
         //Player player = new Player(10, 10, Color.Yellow, gamegridSize);
 
@@ -35,6 +40,14 @@ namespace Tron
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             this.TargetElapsedTime = TimeSpan.FromSeconds(1.0f / 5.0f);
+            
+            
+            NetPeerConfiguration config = new NetPeerConfiguration("xnaapp");
+            config.EnableMessageType(NetIncomingMessageType.DiscoveryResponse);
+
+            client = new NetClient(config);
+            client.Start();
+
         }
 
         protected override void LoadContent()
@@ -48,8 +61,8 @@ namespace Tron
             skullTexture = Content.Load<Texture2D>("skull");
 
             //Player initialisieren
-            playerList.Add(new Player(0, 0, Color.Yellow, gamegridSize, arrowTexture));
-            playerList.Add(new Player(1, 5, Color.Red, gamegridSize, arrowTexture));
+            //playerList.Add(new Player(0, 0, Color.Yellow, gamegridSize, arrowTexture));
+            //playerList.Add(new Player(1, 5, Color.Red, gamegridSize, arrowTexture));
 
             //Gamegrid erzeugen
             for (int i = 0; i < gamegrid.GetLength(0); i++)
@@ -69,6 +82,8 @@ namespace Tron
             graphics.ApplyChanges();
             Window.Title = "Tron2D";
 
+            client.DiscoverLocalPeers(1337);
+
             base.Initialize();
         }
 
@@ -80,33 +95,64 @@ namespace Tron
             ProcessKeyboard();
             
             //Collision detection
+            Player player = playerList[0];
 
-            foreach (Player player in playerList)
+            if (!gamegrid[player.pos[0], player.pos[1]].isWall)
             {
-                if (!gamegrid[player.posX, player.posY].isWall)
-                {
-                    //Set Wall and Color
-                    gamegrid[player.posX, player.posY].isWall = true;
-                    gamegrid[player.posX, player.posY].color = player.color;
-                    gamegrid[player.posX, player.posY].wallTexture = trailTexture;
-                    player.move();
-                }
-                else
-                {
-                    player.playerTexture = skullTexture;
-                    player.isAlive = false;
-                }
+                //Set Wall and Color
+                gamegrid[player.pos[0], player.pos[1]].isWall = true;
+                gamegrid[player.pos[0], player.pos[1]].color = player.color;
+                gamegrid[player.pos[0], player.pos[1]].wallTexture = trailTexture;
 
-                if (!player.isAlive)
-                {
-                    //Spieler verloren
-                }
+                //Send move to Server
+                sendMove(player);
+
+                gamegrid[player.pos[0], player.pos[1]].isWall = true;
+                gamegrid[player.pos[0], player.pos[1]].color = player.color;
+                gamegrid[player.pos[0], player.pos[1]].wallTexture = trailTexture;
             }
-            
-            
+            else
+            {
+                player.playerTexture = skullTexture;
+                player.isAlive = false;
+            }
+
+            if (!player.isAlive)
+            {
+                //Spieler verloren
+            }
+
+
+            //Read Message from Server
+
+            NetIncomingMessage msg;
+            while ((msg = client.ReadMessage()) != null)
+            {
+                switch (msg.MessageType)
+                {
+                    case NetIncomingMessageType.DiscoveryResponse:
+                        client.Connect(msg.SenderEndPoint);
+                        break;
+                    case NetIncomingMessageType.Data:
+
+                        player.name = msg.ReadInt64();
+                        player.pos[0] = msg.ReadInt32();
+                        player.pos[1] = msg.ReadInt32();
+                        break;
+                }
+            } 
             base.Update(gameTime);
         }
 
+        public void sendMove(Player player)
+        {
+            //Send movement to Server
+            NetOutgoingMessage sendMsg = client.CreateMessage();
+            sendMsg.Write(player.directionX);//X
+            sendMsg.Write(player.directionY);//Y
+            sendMsg.Write(gamegridSize);//Gridsize
+            client.SendMessage(sendMsg, NetDeliveryMethod.Unreliable);
+        }
 
         public void ProcessKeyboard()
         {
@@ -135,28 +181,6 @@ namespace Tron
             {
                 player1.directionX = 0;
                 player1.directionY = 1;
-            }
-
-            //WASD// 
-            if (boardState.IsKeyDown(Keys.A))
-            {
-                player2.directionX = -1;
-                player2.directionY = 0;
-            }
-            if (boardState.IsKeyDown(Keys.D))
-            {
-                player2.directionX = 1;
-                player2.directionY = 0;
-            }
-            if (boardState.IsKeyDown(Keys.W))
-            {
-                player2.directionX = 0;
-                player2.directionY = -1;
-            }
-            if (boardState.IsKeyDown(Keys.S))
-            {
-                player2.directionX = 0;
-                player2.directionY = 1;
             }
         }
 
@@ -198,8 +222,16 @@ namespace Tron
             {
                 //if (player.isAlive == true)
 
-                spriteBatch.Draw(player.playerTexture, new Rectangle(player.posX * fieldSize, player.posY * fieldSize, fieldSize, fieldSize), player.color);
+                spriteBatch.Draw(player.playerTexture, new Rectangle(player.pos[0] * fieldSize, player.pos[1] * fieldSize, fieldSize, fieldSize), player.color);
             }
+        }
+
+
+        protected override void OnExiting(object sender, EventArgs args)
+        {
+            client.Shutdown("Client verlassen " + playerList[0].name);
+
+            base.OnExiting(sender, args);
         }
     }
 }

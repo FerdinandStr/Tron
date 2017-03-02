@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Tron
 {
-    class Field
+    public class Field
     {
         public bool isWall = false;
         public bool isDrawn = false;

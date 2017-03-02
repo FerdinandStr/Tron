@@ -7,10 +7,10 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Tron
 {
-    class Player
+    public class Player
     {
-        public int posX;
-        public int posY;
+        public long name;
+        public int[] pos;
         public int directionX = 1;
         public int directionY = 0;
         //public int speed;
@@ -22,8 +22,7 @@ namespace Tron
 
         public Player(int positionX, int positionY, Color col, int gamegridSize, Texture2D tex)
         {
-            posX = positionX;
-            posY = positionY;
+            pos = new int[] { positionX, positionY };
             color = col;
             gridSize = gamegridSize;
             playerTexture = tex;
@@ -31,28 +30,28 @@ namespace Tron
 
         public void move()
         {
-            int newPosX = posX + directionX;
-            int newPosY = posY + directionY;
+            int newPosX = pos[0] + directionX;
+            int newPosY = pos[1] + directionY;
 
             //Avoid Nullpointer Wallcollision and move da Karra aufd andra Seid
             if(newPosX == -1){
-                posX = gridSize -1;
+                pos[0] = gridSize - 1;
             }
             else if(newPosX == gridSize){
-                posX = 0;
+                pos[0] = 0;
             }
             else{
-                posX = newPosX;
+                pos[0] = newPosX;
             }
 
             if(newPosY == -1){
-                posY = gridSize -1;
+                pos[1] = gridSize - 1;
             }
             else if(newPosY == gridSize){
-                posY = 0;
+                pos[1] = 0;
             }
             else{
-                posY = newPosY;
+                pos[1] = newPosY;
             }
         }
     }
