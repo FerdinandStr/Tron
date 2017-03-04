@@ -22,4 +22,9 @@ namespace Tron
             wallTexture = wallTex;
         }
     }
+
+    public class newFieldClass
+    {
+        public bool test = true;
+    }
 }
