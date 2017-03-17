@@ -21,10 +21,10 @@ namespace Tron
         {
             wallTexture = wallTex;
         }
+        public Field()//ServerField
+        {
+
+        }
     }
 
-    public class newFieldClass
-    {
-        public bool test = true;
-    }
 }

@@ -40,10 +40,10 @@ namespace Tron
                 if (down) color.A += 3; else color.A -= 3;
                 if (mouse.LeftButton == ButtonState.Pressed) isClicked = true;
             }
-            else if (color.A < 255)
+            else
             {
-                color.A += 3;
                 isClicked = false;
+                if (color.A < 255) color.A += 3;
             }
         }
 
