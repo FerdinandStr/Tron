@@ -26,7 +26,9 @@ namespace Tron
         Texture2D textureBtnLocal;
         Texture2D textureBtnNetwork;
 
-        SpriteFont fontRoboto;
+        SpriteFont fontRoboto_20;
+        SpriteFont fontRoboto_80;
+
 
         private String lobbyText;
         public MenuButton btnLocal;
@@ -39,6 +41,7 @@ namespace Tron
 
         private int gameMode = 0;//false = Local //true = Network
         int GameTimeDivisor = 0;
+        private int timer = 3;
         private bool lobby = true;
         private bool gamestart = false;
 
@@ -78,7 +81,8 @@ namespace Tron
             textureBtnNetwork = Content.Load<Texture2D>("btnNetwork");
             textureBackground = Content.Load<Texture2D>("logogroßswitch");
 
-            fontRoboto = Content.Load<SpriteFont>("Roboto");
+            fontRoboto_20 = Content.Load<SpriteFont>("Roboto_20");
+            fontRoboto_80 = Content.Load<SpriteFont>("Roboto_50");
 
             btnLocal = new MenuButton(textureBtnLocal, graphics.GraphicsDevice, textureBtnLocal.Width, textureBtnLocal.Height);
             btnNetwork = new MenuButton(textureBtnNetwork, graphics.GraphicsDevice, textureBtnNetwork.Width, textureBtnNetwork.Height);
@@ -94,7 +98,7 @@ namespace Tron
             graphics.PreferredBackBufferWidth = screensize;
             graphics.IsFullScreen = false;
             graphics.ApplyChanges();
-            Window.Title = "Tron2D";
+            Window.Title = "Snake Wars";
             this.IsMouseVisible = true;
 
             createColorList();
@@ -117,57 +121,78 @@ namespace Tron
                 if (gameMode == 1)
                 {
                     ProcessKeyboard();
-
-                    if (GameTimeDivisor == 15)
+                    if (gamestart)
                     {
-                        int playersAlive = 0;
-                        foreach (Player player in playerList)
+                        if (GameTimeDivisor == 15)
                         {
-                            if (player.isAlive)
-                            {
-                                if (!gamegrid[player.pos[0], player.pos[1]].isWall)
-                                {
-                                    //Set Wall and Color
-                                    gamegrid[player.pos[0], player.pos[1]].isWall = true;
-                                    gamegrid[player.pos[0], player.pos[1]].color = player.color;
-                                    gamegrid[player.pos[0], player.pos[1]].wallTexture = textureTrail;
-
-                                    //Send move to Server
-                                    player.move();
-
-                                    playersAlive++;
-                                }
-                                else
-                                {
-                                    player.playerTexture = textureSkull;
-                                    player.isAlive = false;
-                                }
-                            }
-                        }
-
-                        if (playersAlive == 0)
-                        {
-                            // Gameover //
-                            lobby = true;
-                            gameMode = 0;
-
+                            int playersAlive = 0;
                             foreach (Player player in playerList)
                             {
-                                player.playerTexture = textureArrow;
-                                player.resetPlayer();
+                                if (player.isAlive)
+                                {
+                                    if (!gamegrid[player.pos[0], player.pos[1]].isWall)
+                                    {
+                                        //Set Wall and Color
+                                        gamegrid[player.pos[0], player.pos[1]].isWall = true;
+                                        gamegrid[player.pos[0], player.pos[1]].color = player.color;
+                                        gamegrid[player.pos[0], player.pos[1]].wallTexture = textureTrail;
+
+                                        //Send move to Server
+                                        player.move();
+
+                                        playersAlive++;
+                                    }
+                                    else
+                                    {
+                                        player.playerTexture = textureSkull;
+                                        player.isAlive = false;
+                                    }
+                                }
                             }
 
-                        }
-                        else if (playersAlive == 1)
-                        {
-                            foreach (Player player in playerList)
+                            if (playersAlive == 0)
                             {
-                                if (player.isAlive) player.win();
+                                // Gameover //
+                                lobby = true;
+                                gameMode = 0;
+                                gamestart = false;
+                                timer = 3;
+
+                                foreach (Player player in playerList)
+                                {
+                                    player.playerTexture = textureArrow;
+                                    player.resetPlayer();
+                                }
+
                             }
+                            else if (playersAlive == 1)
+                            {
+                                foreach (Player player in playerList)
+                                {
+                                    if (player.isAlive) player.win();
+                                }
+                            }
+                            GameTimeDivisor = 0;
                         }
-                        GameTimeDivisor = 0;
+                        GameTimeDivisor++;
                     }
-                    GameTimeDivisor++;
+                    else
+                    {
+                        if (GameTimeDivisor == 60)
+                        {
+                            if (timer > 0)
+                            {
+                                timer--;
+                            }
+                            else
+                            {
+                                gamestart = true;
+                            }
+
+                            GameTimeDivisor = 0;
+                        }
+                        GameTimeDivisor++;
+                    }
                 }
                 // ######################### NETWORK ######################### //
                 else if (gameMode == 2)
@@ -179,21 +204,23 @@ namespace Tron
 
                         if (GameTimeDivisor == 15)
                         {
-                            Player player = playerList[0];
-                            if (player.isAlive)
+                            foreach (Player player in playerList)
                             {
-                                gamegrid[player.pos[0], player.pos[1]].color = player.color;
-                                gamegrid[player.pos[0], player.pos[1]].wallTexture = textureTrail;
+                                if (player.isAlive)
+                                {
+                                    gamegrid[player.pos[0], player.pos[1]].color = player.color;
+                                    gamegrid[player.pos[0], player.pos[1]].wallTexture = textureTrail;
 
-                                //Send move to Server
-                                sendMove();
+                                    //Send move to Server
+                                    sendMove();
 
+                                }
+                                else
+                                {
+                                    player.playerTexture = textureSkull;
+                                }
+                                GameTimeDivisor = 0;
                             }
-                            else
-                            {
-                                player.playerTexture = textureSkull;
-                            }
-                            GameTimeDivisor = 0;
                         }
                         GameTimeDivisor++;
                     }
@@ -214,9 +241,10 @@ namespace Tron
                             case NetIncomingMessageType.Data:
 
                                 long recievedId = msg.ReadInt64();
+                                int playerNr = msg.ReadInt32();
+                               
                                 //Prüfung ob Player vorhanden
-                                //int playerNr = msg.ReadInt32();
-                                addPlayersServer(recievedId);
+                                addPlayersServer(playerNr, recievedId);
                                 bool alive = msg.ReadBoolean();
                                 int posX = msg.ReadInt32();
                                 int posY = msg.ReadInt32();
@@ -314,17 +342,33 @@ namespace Tron
         public void addPlayers()
         {
             playerList = new List<Player>();
-            if (playerCount >= 1) playerList.Add(new Player(1,1, Color.Yellow, gamegridSize, textureArrow));
-            if (playerCount >= 2) playerList.Add(new Player(2,2, Color.Red, gamegridSize, textureArrow));
-            if (playerCount >= 3) playerList.Add(new Player(3,3, Color.Blue, gamegridSize, textureArrow));
-            if (playerCount >= 4) playerList.Add(new Player(4,4, Color.Green, gamegridSize, textureArrow));
+
+            //reset Color Dictionary
+            foreach (Color key in colorList.Keys.ToList())
+            {
+                colorList[key] = false;
+            }
+
+            for (int i = 1; i <= playerCount; i++)
+            {
+                //Erste freie Farbe aus Farblist hohlen
+                playerList.Add(new Player(i, i, colorList.First(x => x.Value == false).Key, gamegridSize, textureArrow));
+                //Erste Farbe als vergeben markieren
+                colorList[colorList.First(x => x.Value == false).Key] = true;
+            }
+                
+
+            //if (playerCount >= 1) playerList.Add(new Player(1,1, Color.Yellow, gamegridSize, textureArrow));
+            //if (playerCount >= 2) playerList.Add(new Player(2,2, Color.Red, gamegridSize, textureArrow));
+            //if (playerCount >= 3) playerList.Add(new Player(3,3, Color.Blue, gamegridSize, textureArrow));
+            //if (playerCount >= 4) playerList.Add(new Player(4,4, Color.Green, gamegridSize, textureArrow));
             //if (playerCount >= 5) playerList.Add(new Player(playerId, Color.Orange, gamegridSize, textureArrow));
             //if (playerCount >= 6) playerList.Add(new Player(playerId, Color.Purple, gamegridSize, textureArrow));
             //if (playerCount >= 7) playerList.Add(new Player(playerId, Color.Black, gamegridSize, textureArrow));
             //if (playerCount >= 8) playerList.Add(new Player(playerId, Color.White, gamegridSize, textureArrow));
         }
 
-        public void addPlayersServer(long playerId)
+        public void addPlayersServer(int playerServerNr, long playerId)
         {
             bool playerExists = false;
             foreach (Player player in playerList)
@@ -336,7 +380,7 @@ namespace Tron
             }
             if (!playerExists)
             {
-                playerList.Add(new Player(playerNr, playerId, colorList.First(x => x.Value == false).Key, gamegridSize, textureArrow));//Erste freie Farbe aus Farblist hohlen
+                playerList.Add(new Player(playerServerNr, playerId, colorList.First(x => x.Value == false).Key, gamegridSize, textureArrow));//Erste freie Farbe aus Farblist hohlen
                 colorList[colorList.First(x => x.Value == false).Key] = true;//Erste Farbe als vergeben markieren
                 gamestart = true;
             }
@@ -370,7 +414,7 @@ namespace Tron
             {
 
                 spriteBatch.Draw(textureBackground,new Rectangle(0,0, screensize,screensize), Color.White);
-                spriteBatch.DrawString(fontRoboto, lobbyText, new Vector2(20, 10), Color.Black);
+                spriteBatch.DrawString(fontRoboto_20, lobbyText, new Vector2(20, 10), Color.Black);
                 btnLocal.Draw(spriteBatch);
                 btnNetwork.Draw(spriteBatch);
             }
@@ -394,6 +438,12 @@ namespace Tron
                 {
                     Rectangle rect = new Rectangle(i * fieldSize, j * fieldSize, fieldSize, fieldSize);
                     spriteBatch.Draw(gamegrid[i, j].wallTexture, rect, gamegrid[i, j].color);
+
+                    //Starttimer
+                    if (gamestart == false && gameMode == 1)
+                    {
+                        spriteBatch.DrawString(fontRoboto_80, timer.ToString(), new Vector2(screensize / 2 - 40, screensize / 2 -40), Color.Black);
+                    }
                 }
             }
         }
@@ -406,7 +456,7 @@ namespace Tron
                 //if (player.isAlive == true)
                 // new Rectangle((player.pos[0] * fieldSize) + fieldSize / 2, (player.pos[1] * fieldSize) +1 fieldSize / 2, fieldSize, fieldSize)//Position des Feldes plus hälfte der Feldgrößen, damit das rectangle in der mitte gedreht werden kann
                 spriteBatch.Draw(player.playerTexture, new Rectangle((player.pos[0] * fieldSize) + fieldSize / 2, (player.pos[1] * fieldSize) + fieldSize / 2, fieldSize, fieldSize), null, player.color, MathHelper.ToRadians(player.rotation), new Vector2(fieldSize / 2, fieldSize / 2), SpriteEffects.None, 0f);
-                spriteBatch.DrawString(fontRoboto, player.getName(), new Vector2(player.pos[0] * fieldSize + 20, player.pos[1] * fieldSize + 20), Color.Gray);
+                spriteBatch.DrawString(fontRoboto_20, player.getName(), new Vector2(player.pos[0] * fieldSize + 20, player.pos[1] * fieldSize + 20), Color.Gray);
             }
         }
 

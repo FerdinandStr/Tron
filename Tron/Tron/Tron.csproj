@@ -16,7 +16,7 @@
     <XnaProfile>Reach</XnaProfile>
     <XnaCrossPlatformGroupID>f09c9579-f31a-48bf-b983-ac23d6d44091</XnaCrossPlatformGroupID>
     <XnaOutputType>Game</XnaOutputType>
-    <ApplicationIcon>Game.ico</ApplicationIcon>
+    <ApplicationIcon>SnakeWars.ico</ApplicationIcon>
     <Thumbnail>
     </Thumbnail>
     <PublishUrl>publish\</PublishUrl>
@@ -85,6 +85,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Game.ico" />
+    <Content Include="SnakeWars.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TronContent\TronContent.contentproj">

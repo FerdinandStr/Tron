@@ -7,8 +7,6 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Tron
 {
-
-
     public class Player
     {
         public String name = "";
@@ -18,24 +16,15 @@ namespace Tron
         public int directionX = 0;
         public int directionY = 0;
         public float rotation = 90;
-        //public int speed;
         public Color color;
+        public Texture2D playerTexture;
         public int gridSize;
         public bool isAlive = true;
         private int wins = 0;
         private int winsOld = 0;
 
-        public Texture2D playerTexture;
 
-        public Player(int positionX, int positionY, int dirX, int dirY, Color col, int gamegridSize, Texture2D tex)
-        {
-            pos = new int[] { positionX, positionY };
-            color = col;
-            gridSize = gamegridSize;
-            playerTexture = tex;
-            directionX = dirX;
-            directionY = dirY;
-        }
+
         public Player(int nr, long id, Color col, int gamegridSize, Texture2D tex)
         {
             color = col;
@@ -43,7 +32,7 @@ namespace Tron
             playerTexture = tex;
             playerNr = nr;
             playerId = id;
-            setStartDirection();
+            setStartPosition();
             changeRotation();
         }
 
@@ -52,11 +41,11 @@ namespace Tron
             gridSize = gamegridSize;
             playerNr = nr;
             playerId = id;
-            setStartDirection();
+            setStartPosition();
             changeRotation();
         }
 
-        private void setStartDirection()
+        private void setStartPosition()
         {
             //Kompliziert vereinfachte hoch wissenschaftliche Mathematik
             int mid = (gridSize-1) / 2;
@@ -133,7 +122,7 @@ namespace Tron
         }
 
         public void resetPlayer(){
-            setStartDirection();
+            setStartPosition();
             changeRotation();
             isAlive = true;
             winsOld = wins;

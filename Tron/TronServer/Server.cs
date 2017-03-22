@@ -144,7 +144,7 @@ namespace TronServer
                             }
 
                             Player msgPlayer = player.Tag as Player;
-                            //sendMessage.Write(msgPlayer.playerNr);
+                            sendMessage.Write(msgPlayer.playerNr);
 
                             //Collision Detection and Movement //
                             if (!gamegrid[msgPlayer.pos[0], msgPlayer.pos[1]].isWall)
